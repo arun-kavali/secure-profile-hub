@@ -1,174 +1,117 @@
-This project is a production-ready full-stack application that allows users to register, log in, and upload a profile image.
-Images are securely stored in AWS S3 and served via CloudFront, following industry-standard media handling practices.
+Full Stack User Profile Application
 
-🧱 Tech Stack
+This project is a production ready full stack application that allows users to register, log in, and upload a profile image. The images are securely stored in AWS S3 and delivered using CloudFront following industry standard media handling practices.
+
+Technology Stack
+
 Frontend
-
 React.js
-
 Styled Components
-
 Axios
-
 React Router
-
-JWT-based authentication
+JWT based authentication
 
 Backend
-
 Node.js
-
 Express.js
-
-PostgreSQL (NeonTech)
-
+PostgreSQL using NeonTech
 JWT Authentication
+bcrypt for password hashing
+multer for file uploads
+sharp for image compression
 
-bcrypt
+Cloud and Infrastructure
+AWS S3 for image storage
+AWS CloudFront for CDN
+Vercel for frontend and backend deployment
+NeonTech for PostgreSQL database
 
-multer
+Key Features
 
-sharp (image compression)
-
-Cloud & Infrastructure
-
-AWS S3 (private bucket)
-
-AWS CloudFront (CDN)
-
-Vercel (Frontend & Backend deployment)
-
-NeonTech (PostgreSQL database)
-
-✨ Key Features
-
-User Registration & Login
-
-JWT-based authentication
-
-Protected routes
-
+User registration and login
+JWT based authentication
+Protected API routes
 Profile image upload
+Image compression under 10KB
+Secure media delivery via CloudFront
+Environment based configuration
 
-Image compression to under 10KB
+Database Schema
 
-CDN-based image delivery via CloudFront
+Users Table
 
-Production-grade media architecture
+id Primary key
+name User name
+email Unique email address
+password Hashed password
+profile_image_key S3 object key only
+created_at Record creation timestamp
 
-Secure environment variable handling
+The database stores only the image object key. Full S3 or CloudFront URLs are never stored.
 
-🗄️ Database Schema
-users table
-Column	Type	Description
-id	integer	Primary key
-name	text	User name
-email	text	Unique email
-password	text	Hashed password
-profile_image_key	text	S3 object key only
-created_at	timestamp	Record creation time
+Media Handling Architecture
 
-❗ Important:
-The database stores only the image object key, never the full S3 or CloudFront URL.
+User requests media through CloudFront which fetches content from a private S3 bucket. Image URLs are generated dynamically using a configurable base URL. This allows infrastructure changes without database updates.
 
-🖼️ Media Handling Architecture (Production Standard)
-User → CloudFront (MEDIA_BASE_URL) → S3 Bucket
+Example dynamic URL generation uses MEDIA_BASE_URL combined with the stored object key.
 
+Environment Variables
 
-Images are uploaded to private S3
+Create a .env file locally and add the following variables. These values should not be committed to GitHub.
 
-CloudFront acts as the only public access point
+DATABASE_URL NeonTech database connection URL
+JWT_SECRET Secret key used for JWT signing
+AWS_ACCESS_KEY_ID AWS access key
+AWS_SECRET_ACCESS_KEY AWS secret key
+AWS_REGION AWS region
+AWS_BUCKET_NAME S3 bucket name
+MEDIA_BASE_URL CloudFront distribution URL
 
-URLs are generated dynamically using configuration
+The same variables must be configured in Vercel for deployment.
 
-Example:
+Backend API Endpoints
 
-imageUrl = `${MEDIA_BASE_URL}/${profile_image_key}`
+POST /api/auth/register Register a new user
+POST /api/auth/login Authenticate user
+GET /api/user/me Fetch logged in user details
+POST /api/user/upload-profile Upload profile image
 
+Protected routes require a valid JWT token.
 
-Changing infrastructure does not require database updates.
+Image Upload Rules
 
-🔐 Environment Variables
-
-Create a .env file (not committed to GitHub):
-
-DATABASE_URL=your_neon_db_url
-JWT_SECRET=your_secure_jwt_secret
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=ap-south-1
-AWS_BUCKET_NAME=your_bucket_name
-MEDIA_BASE_URL=https://your-cloudfront-url
-
-
-For deployment, add the same variables in Vercel → Environment Variables.
-
-🛠️ Backend API Endpoints
-Authentication
-
-POST /api/auth/register
-
-POST /api/auth/login
-
-User
-
-GET /api/user/me (protected)
-
-POST /api/user/upload-profile (protected)
-
-📷 Image Upload Rules
-
-Allowed formats: JPG, JPEG, PNG
-
-User may upload images of any size (20KB, 500KB, 1MB)
-
-Backend compresses images using Sharp
+Only JPG JPEG and PNG formats are allowed
+Users can upload images of any size
+Backend compresses images using sharp
+Final stored image size must be under 10KB
+Requests exceeding the size limit are rejected
 
 Local Development Setup
-Backend
-cd backend
-npm install
-npm run dev
 
-Frontend
-cd frontend
-npm install
-npm run dev
+Backend Setup
+Navigate to backend directory
+Install dependencies
+Start development server
 
+Frontend Setup
+Navigate to frontend directory
+Install dependencies
+Start development server
 
 Ensure backend is running before starting frontend.
 
-☁️ Deployment
-Backend
+Deployment Process
 
-Deploy to Vercel
+Backend is deployed on Vercel with required environment variables configured.
+Frontend is deployed on Vercel with API and media base URLs set.
+PostgreSQL database is hosted on NeonTech.
+AWS S3 and CloudFront are used for media storage and delivery.
 
-Add environment variables
+Final Validation Checklist
 
-Ensure vercel.json is present
-
-Frontend
-
-Deploy to Vercel
-
-Set:
-
-VITE_API_BASE_URL=https://your-backend.vercel.app/api
-VITE_MEDIA_BASE_URL=https://your-cloudfront-url
-
-✅ Final Validation Checklist
-
-User can register & login
-
-JWT persists across refresh
-
-Profile image uploads successfully
-
-Image stored in S3 and served via CloudFront
-
-Database stores only profile_image_key
-
-MEDIA_BASE_URL change does not affect DB
-Final stored image must be < 10KB
-
-Requests exceeding this limit are rejected
+User registration works correctly
+Login and authentication persist across refresh
+Profile image upload works
+Images are stored in S3 and served via CloudFront
+Database stores only object keys
+Changing MEDIA_BASE_URL does not affect database records
