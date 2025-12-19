@@ -1,73 +1,174 @@
-# Welcome to your Lovable project
+This project is a production-ready full-stack application that allows users to register, log in, and upload a profile image.
+Images are securely stored in AWS S3 and served via CloudFront, following industry-standard media handling practices.
 
-## Project info
+🧱 Tech Stack
+Frontend
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+React.js
 
-## How can I edit this code?
+Styled Components
 
-There are several ways of editing your application.
+Axios
 
-**Use Lovable**
+React Router
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+JWT-based authentication
 
-Changes made via Lovable will be committed automatically to this repo.
+Backend
 
-**Use your preferred IDE**
+Node.js
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Express.js
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+PostgreSQL (NeonTech)
 
-Follow these steps:
+JWT Authentication
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+bcrypt
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+multer
 
-# Step 3: Install the necessary dependencies.
-npm i
+sharp (image compression)
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Cloud & Infrastructure
+
+AWS S3 (private bucket)
+
+AWS CloudFront (CDN)
+
+Vercel (Frontend & Backend deployment)
+
+NeonTech (PostgreSQL database)
+
+✨ Key Features
+
+User Registration & Login
+
+JWT-based authentication
+
+Protected routes
+
+Profile image upload
+
+Image compression to under 10KB
+
+CDN-based image delivery via CloudFront
+
+Production-grade media architecture
+
+Secure environment variable handling
+
+🗄️ Database Schema
+users table
+Column	Type	Description
+id	integer	Primary key
+name	text	User name
+email	text	Unique email
+password	text	Hashed password
+profile_image_key	text	S3 object key only
+created_at	timestamp	Record creation time
+
+❗ Important:
+The database stores only the image object key, never the full S3 or CloudFront URL.
+
+🖼️ Media Handling Architecture (Production Standard)
+User → CloudFront (MEDIA_BASE_URL) → S3 Bucket
+
+
+Images are uploaded to private S3
+
+CloudFront acts as the only public access point
+
+URLs are generated dynamically using configuration
+
+Example:
+
+imageUrl = `${MEDIA_BASE_URL}/${profile_image_key}`
+
+
+Changing infrastructure does not require database updates.
+
+🔐 Environment Variables
+
+Create a .env file (not committed to GitHub):
+
+DATABASE_URL=your_neon_db_url
+JWT_SECRET=your_secure_jwt_secret
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_REGION=ap-south-1
+AWS_BUCKET_NAME=your_bucket_name
+MEDIA_BASE_URL=https://your-cloudfront-url
+
+
+For deployment, add the same variables in Vercel → Environment Variables.
+
+🛠️ Backend API Endpoints
+Authentication
+
+POST /api/auth/register
+
+POST /api/auth/login
+
+User
+
+GET /api/user/me (protected)
+
+POST /api/user/upload-profile (protected)
+
+📷 Image Upload Rules
+
+Allowed formats: JPG, JPEG, PNG
+
+User may upload images of any size (20KB, 500KB, 1MB)
+
+Backend compresses images using Sharp
+
+Local Development Setup
+Backend
+cd backend
+npm install
 npm run dev
-```
 
-**Edit a file directly in GitHub**
+Frontend
+cd frontend
+npm install
+npm run dev
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
 
-**Use GitHub Codespaces**
+Ensure backend is running before starting frontend.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+☁️ Deployment
+Backend
 
-## What technologies are used for this project?
+Deploy to Vercel
 
-This project is built with:
+Add environment variables
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Ensure vercel.json is present
 
-## How can I deploy this project?
+Frontend
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Deploy to Vercel
 
-## Can I connect a custom domain to my Lovable project?
+Set:
 
-Yes, you can!
+VITE_API_BASE_URL=https://your-backend.vercel.app/api
+VITE_MEDIA_BASE_URL=https://your-cloudfront-url
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+✅ Final Validation Checklist
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+User can register & login
+
+JWT persists across refresh
+
+Profile image uploads successfully
+
+Image stored in S3 and served via CloudFront
+
+Database stores only profile_image_key
+
+MEDIA_BASE_URL change does not affect DB
+Final stored image must be < 10KB
+
+Requests exceeding this limit are rejected
