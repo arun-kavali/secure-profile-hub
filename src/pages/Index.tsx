@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Zap, Database, Cloud } from 'lucide-react';
+import { ArrowRight, Shield, Zap, Cloud } from 'lucide-react';
 import {
   CenteredContainer,
   PrimaryButton,
@@ -191,16 +191,6 @@ const Index: React.FC = () => {
             <FeatureTitle>CloudFront CDN</FeatureTitle>
             <FeatureDescription>
               Images served via AWS CloudFront for lightning-fast global delivery.
-            </FeatureDescription>
-          </FeatureCard>
-
-          <FeatureCard>
-            <FeatureIcon>
-              <Database size={24} />
-            </FeatureIcon>
-            <FeatureTitle>Clean Architecture</FeatureTitle>
-            <FeatureDescription>
-              Only object keys stored in database. URLs generated dynamically from MEDIA_BASE_URL.
             </FeatureDescription>
           </FeatureCard>
         </FeaturesGrid>
