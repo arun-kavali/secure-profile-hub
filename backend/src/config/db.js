@@ -3,7 +3,10 @@ const env = require('./env');
 
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
-  ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: { rejectUnauthorized: false }, // NeonTech requires SSL always
+  max: 10, // Connection pool size
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000
 });
 
 // Initialize database table
