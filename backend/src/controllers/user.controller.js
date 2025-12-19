@@ -24,6 +24,7 @@ const getMe = async (req, res) => {
         name: user.name,
         email: user.email,
         profile_image_key: user.profile_image_key,
+        profile_image_url: getMediaUrl(user.profile_image_key),
         created_at: user.created_at
       }
     });
