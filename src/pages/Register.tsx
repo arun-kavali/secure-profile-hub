@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { AxiosError } from 'axios';
 import { Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
 import {
   CenteredContainer,
@@ -16,7 +15,6 @@ import {
   PrimaryButton,
   Alert,
   StyledLink,
-  Divider,
   ErrorText,
 } from '@/components/styled/StyledComponents';
 import styled from 'styled-components';
@@ -63,9 +61,15 @@ const FooterText = styled.p`
   margin-top: 1.5rem;
 `;
 
+const SuccessAlert = styled(Alert)`
+  background: hsl(142, 70%, 95%);
+  border-color: hsl(142, 70%, 45%);
+  color: hsl(142, 70%, 25%);
+`;
+
 const Register: React.FC = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, isAuthenticated, isLoading: authLoading } = useAuth();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -76,6 +80,14 @@ const Register: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate('/profile');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -109,7 +121,6 @@ const Register: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -123,24 +134,38 @@ const Register: React.FC = () => {
 
     setIsLoading(true);
     setApiError('');
+    setSuccessMessage('');
 
     try {
-      await register({
-        name: formData.name.trim(),
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-      });
-      navigate('/profile');
-    } catch (error) {
-      const axiosError = error as AxiosError<{ message: string }>;
-      setApiError(
-        axiosError.response?.data?.message || 
-        'Registration failed. Please try again.'
+      const { error } = await register(
+        formData.email.trim().toLowerCase(),
+        formData.password,
+        formData.name.trim()
       );
+
+      if (error) {
+        if (error.message.includes('already registered')) {
+          setApiError('This email is already registered. Please login instead.');
+        } else {
+          setApiError(error.message);
+        }
+      } else {
+        setSuccessMessage('Account created! Please check your email to confirm your account.');
+      }
+    } catch (error) {
+      setApiError('Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <CenteredContainer>
+        <Loader2 className="animate-spin" size={32} />
+      </CenteredContainer>
+    );
+  }
 
   return (
     <CenteredContainer>
@@ -159,6 +184,12 @@ const Register: React.FC = () => {
           <Alert $variant="error" style={{ marginBottom: '1.5rem' }}>
             {apiError}
           </Alert>
+        )}
+
+        {successMessage && (
+          <SuccessAlert style={{ marginBottom: '1.5rem' }}>
+            {successMessage}
+          </SuccessAlert>
         )}
 
         <Form onSubmit={handleSubmit}>

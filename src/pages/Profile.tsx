@@ -1,18 +1,14 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { userApi } from '@/lib/api';
-import { getMediaUrl } from '@/config/env';
-import { AxiosError } from 'axios';
-import { Upload, LogOut, Camera, Check, AlertCircle, User } from 'lucide-react';
+import { useAuth, Profile as ProfileType } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Upload, LogOut, Camera, Check, AlertCircle } from 'lucide-react';
 import {
   PageContainer,
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
-  PrimaryButton,
-  SecondaryButton,
   GhostButton,
   Alert,
   Avatar,
@@ -154,7 +150,7 @@ const SuccessStatus = styled(UploadStatus)`
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout, updateUser, isLoading: authLoading } = useAuth();
+  const { user, profile, logout, updateProfile, isLoading: authLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isUploading, setIsUploading] = useState(false);
@@ -163,8 +159,8 @@ const Profile: React.FC = () => {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -173,11 +169,15 @@ const Profile: React.FC = () => {
     if (!allowedTypes.includes(file.type)) {
       return 'Only JPG, JPEG, and PNG files are allowed';
     }
-    // No size limit on client - backend will compress
+    if (file.size > 5 * 1024 * 1024) {
+      return 'File size must be less than 5MB';
+    }
     return null;
   };
 
   const handleFileUpload = useCallback(async (file: File) => {
+    if (!user) return;
+    
     const error = validateFile(file);
     if (error) {
       setUploadError(error);
@@ -189,7 +189,6 @@ const Profile: React.FC = () => {
     setUploadSuccess(false);
     setUploadProgress(0);
 
-    // Simulate progress (real progress would come from axios)
     const progressInterval = setInterval(() => {
       setUploadProgress((prev) => {
         if (prev >= 90) {
@@ -201,32 +200,37 @@ const Profile: React.FC = () => {
     }, 100);
 
     try {
-      const response = await userApi.uploadProfileImage(file);
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update profile with new image URL
+      await updateProfile({ profile_image_url: publicUrl });
+
       clearInterval(progressInterval);
       setUploadProgress(100);
-      
-      // Update user with new profile image key
-      if (user) {
-        updateUser({
-          ...user,
-          profile_image_key: response.profile_image_key,
-        });
-      }
-      
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3000);
-    } catch (error) {
+    } catch (error: any) {
       clearInterval(progressInterval);
-      const axiosError = error as AxiosError<{ message: string }>;
-      setUploadError(
-        axiosError.response?.data?.message ||
-        'Failed to upload image. Please try again.'
-      );
+      setUploadError(error.message || 'Failed to upload image. Please try again.');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
     }
-  }, [user, updateUser]);
+  }, [user, updateProfile]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -262,10 +266,6 @@ const Profile: React.FC = () => {
       .toUpperCase();
   };
 
-  const profileImageUrl = user?.profile_image_key 
-    ? getMediaUrl(user.profile_image_key) 
-    : null;
-
   if (authLoading) {
     return (
       <ProfileContainer>
@@ -283,7 +283,7 @@ const Profile: React.FC = () => {
     );
   }
 
-  if (!user) {
+  if (!user || !profile) {
     navigate('/login');
     return null;
   }
@@ -303,10 +303,10 @@ const Profile: React.FC = () => {
           <AvatarSection>
             <AvatarWrapper>
               <Avatar $size={120}>
-                {profileImageUrl ? (
-                  <AvatarImage src={profileImageUrl} alt={user.name} />
+                {profile.profile_image_url ? (
+                  <AvatarImage src={profile.profile_image_url} alt={profile.name} />
                 ) : (
-                  <AvatarPlaceholder>{getInitials(user.name)}</AvatarPlaceholder>
+                  <AvatarPlaceholder>{getInitials(profile.name)}</AvatarPlaceholder>
                 )}
               </Avatar>
               <UploadBadge htmlFor="avatar-upload-small">
@@ -321,8 +321,8 @@ const Profile: React.FC = () => {
               </UploadBadge>
             </AvatarWrapper>
             <UserInfo>
-              <UserName>{user.name}</UserName>
-              <UserEmail>{user.email}</UserEmail>
+              <UserName>{profile.name}</UserName>
+              <UserEmail>{profile.email}</UserEmail>
             </UserInfo>
           </AvatarSection>
 
@@ -330,7 +330,7 @@ const Profile: React.FC = () => {
             <InfoItem>
               <InfoLabel>Member since</InfoLabel>
               <InfoValue>
-                {new Date(user.created_at).toLocaleDateString('en-US', {
+                {new Date(profile.created_at).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -340,7 +340,7 @@ const Profile: React.FC = () => {
             <InfoItem>
               <InfoLabel>Profile Image</InfoLabel>
               <InfoValue>
-                {user.profile_image_key ? 'Uploaded' : 'Not set'}
+                {profile.profile_image_url ? 'Uploaded' : 'Not set'}
               </InfoValue>
             </InfoItem>
           </InfoGrid>
@@ -350,7 +350,7 @@ const Profile: React.FC = () => {
           <CardHeader style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
             <CardTitle style={{ fontSize: '1.25rem' }}>Upload Profile Image</CardTitle>
             <CardDescription>
-              Upload a JPG, JPEG, or PNG image. Images will be compressed to under 10KB.
+              Upload a JPG, JPEG, or PNG image (max 5MB).
             </CardDescription>
           </CardHeader>
 
@@ -367,7 +367,7 @@ const Profile: React.FC = () => {
             <UploadText>
               {isUploading ? 'Uploading...' : 'Drag and drop or click to upload'}
             </UploadText>
-            <UploadHint>JPG, JPEG, PNG • Any size (will be compressed)</UploadHint>
+            <UploadHint>JPG, JPEG, PNG • Max 5MB</UploadHint>
             <HiddenInput
               id="avatar-upload"
               ref={fileInputRef}
