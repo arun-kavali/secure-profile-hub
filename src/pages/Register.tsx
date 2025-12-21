@@ -61,11 +61,6 @@ const FooterText = styled.p`
   margin-top: 1.5rem;
 `;
 
-const SuccessAlert = styled(Alert)`
-  background: hsl(142, 70%, 95%);
-  border-color: hsl(142, 70%, 45%);
-  color: hsl(142, 70%, 25%);
-`;
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -80,7 +75,6 @@ const Register: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -134,7 +128,6 @@ const Register: React.FC = () => {
 
     setIsLoading(true);
     setApiError('');
-    setSuccessMessage('');
 
     try {
       const { error } = await register(
@@ -149,12 +142,13 @@ const Register: React.FC = () => {
         } else {
           setApiError(error.message);
         }
+        setIsLoading(false);
       } else {
-        setSuccessMessage('Account created! Please check your email to confirm your account.');
+        // Registration successful - user is auto-logged in, navigate to profile
+        navigate('/profile');
       }
     } catch (error) {
       setApiError('Registration failed. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -186,11 +180,6 @@ const Register: React.FC = () => {
           </Alert>
         )}
 
-        {successMessage && (
-          <SuccessAlert style={{ marginBottom: '1.5rem' }}>
-            {successMessage}
-          </SuccessAlert>
-        )}
 
         <Form onSubmit={handleSubmit}>
           <FormGroup>
