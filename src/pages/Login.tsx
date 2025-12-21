@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { AxiosError } from 'axios';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import {
   CenteredContainer,
@@ -64,7 +63,7 @@ const FooterText = styled.p`
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   
   const [formData, setFormData] = useState({
     email: '',
@@ -73,6 +72,13 @@ const Login: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate('/profile');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -109,21 +115,36 @@ const Login: React.FC = () => {
     setApiError('');
 
     try {
-      await login({
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-      });
-      navigate('/profile');
-    } catch (error) {
-      const axiosError = error as AxiosError<{ message: string }>;
-      setApiError(
-        axiosError.response?.data?.message || 
-        'Invalid email or password. Please try again.'
+      const { error } = await login(
+        formData.email.trim().toLowerCase(),
+        formData.password
       );
+
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          setApiError('Invalid email or password.');
+        } else if (error.message.includes('Email not confirmed')) {
+          setApiError('Please confirm your email before logging in.');
+        } else {
+          setApiError(error.message);
+        }
+      } else {
+        navigate('/profile');
+      }
+    } catch (error) {
+      setApiError('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <CenteredContainer>
+        <Loader2 className="animate-spin" size={32} />
+      </CenteredContainer>
+    );
+  }
 
   return (
     <CenteredContainer>
