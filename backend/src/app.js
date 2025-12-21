@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
+const { getStorageMode } = require('./services/storage.service');
 
 const app = express();
 
@@ -13,9 +15,21 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
+// Serve static uploads when using local storage
+const uploadsPath = path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath, {
+  maxAge: '1y', // Cache for 1 year (similar to S3/CloudFront)
+  etag: true,
+  lastModified: true
+}));
+
+// Health check with storage mode info
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    storageMode: getStorageMode()
+  });
 });
 
 // Routes
