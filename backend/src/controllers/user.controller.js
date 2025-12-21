@@ -1,6 +1,6 @@
 const db = require('../config/db');
 const { compressImage } = require('../services/image.service');
-const { uploadToS3, deleteFromS3, getMediaUrl, generateProfileImageKey } = require('../services/s3.service');
+const { uploadFile, deleteFile, getMediaUrl, generateProfileImageKey } = require('../services/storage.service');
 
 /**
  * Get current user profile
@@ -66,9 +66,9 @@ const uploadProfileImage = async (req, res) => {
       });
     }
 
-    // Generate unique key and upload to S3
+    // Generate unique key and upload to storage
     const newImageKey = generateProfileImageKey(user.name);
-    await uploadToS3(compressedBuffer, newImageKey, 'image/jpeg');
+    await uploadFile(compressedBuffer, newImageKey, 'image/jpeg');
 
     // Update database with new key
     await db.query(
@@ -76,10 +76,10 @@ const uploadProfileImage = async (req, res) => {
       [newImageKey, req.userId]
     );
 
-    // Delete old image from S3 if exists
+    // Delete old image from storage if exists
     if (oldImageKey) {
       try {
-        await deleteFromS3(oldImageKey);
+        await deleteFile(oldImageKey);
       } catch (deleteError) {
         console.error('Failed to delete old image:', deleteError);
         // Non-critical error, continue
